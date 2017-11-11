@@ -34,20 +34,29 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	// Bucket Bounds
+	// Bucket Bounds (NON-INCLUSIVE)
 
-	int bucket_sizes[NUMBER_OF_BUCKETS];
+	int bucket_bounds[NUMBER_OF_BUCKETS];
 	int bucket_std_size = ARRAY_SIZE / NUMBER_OF_BUCKETS;
 	int extra = ARRAY_SIZE % NUMBER_OF_BUCKETS;
 
-	for (int i = 0 ; i < NUMBER_OF_BUCKETS; i++) {
-		if (extra) {
-			bucket_sizes[i] = bucket_std_size + 1;
+	if (extra) {
+			bucket_bounds[0] = bucket_std_size + 1;
 			--extra;
 		} else {
-			bucket_sizes[i] = bucket_std_size;
+			bucket_bounds[0] = bucket_std_size;
+		}
+
+	for (int i = 1 ; i < NUMBER_OF_BUCKETS; i++) {
+		if (extra) {
+			bucket_bounds[i] = bucket_bounds[i-1] + bucket_std_size + 1;
+			--extra;
+		} else {
+			bucket_bounds[i] = bucket_bounds[i-1] + bucket_std_size;
 		}
 	}
+
+	//print_array(&NUMBER_OF_BUCKETS, bucket_bounds); #  DEBUG
 
 	// Print parameters
 
