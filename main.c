@@ -78,20 +78,27 @@ int main(int argc, char** argv) {
 
 	// Build & Fill the buckets
 
-
-	/* Segfault
-	List* buckets[NUMBER_OF_BUCKETS];
+	List buckets[NUMBER_OF_BUCKETS];
 	for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
-		intlist_init(buckets[i], bucket_array_sizes[i]);
-	}*/
+		intlist_init(&buckets[i], bucket_array_sizes[i]);
+	}
+
+	for (int i = 0; i < ARRAY_SIZE; i++) {
+		for (int b = 0; b < NUMBER_OF_BUCKETS; b++) {
+			if (ORIGINAL[i] < bucket_bounds[b]) {
+				intlist_append(&buckets[b], &ORIGINAL[i]);
+				break;
+			}
+		}
+	}
 
 
 
 
 
-	//for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
-//		print_array(&(bucket_array_sizes[i]), buckets[i]);
-	//}
+	for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+		print_array(&bucket_array_sizes[i], (buckets[i].int_list));  // DEBUG
+	}
 
 	// Print parameters
 
