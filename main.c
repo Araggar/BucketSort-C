@@ -3,12 +3,41 @@
 #include <assert.h>
 #include <float.h>
 #include <stdlib.h>
+#include <mpi.h>
 
 #include "intlist.h"
 
+// Print parameters
+void print_parameters(const unsigned int ARRAY_SIZE,
+					  const unsigned int NUMBER_OF_BUCKETS,
+					  const unsigned int NUMBER_OF_PROCESSES, 
+					  int min_n, int max_n);
+
+// Original array 
 void print_array(const unsigned int*, int*);
+
 int compare_double(const void *x, const void *y);
+
 int compare_int(const void *x, const void *y);
+
+// Set the original array
+int *set_original(const unsigned int ARRAY_SIZE);
+
+// Bucket Bounds (NON-INCLUSIVE)
+int *set_bounds(const unsigned int ARRAY_SIZE, 
+				const unsigned int NUMBER_OF_BUCKETS);
+
+// Count bucket sizes and store the Original array
+int *set_bucket_sizes(int *bucket_bounds,
+				      const unsigned int ARRAY_SIZE,
+				      const unsigned int NUMBER_OF_BUCKETS,
+				      int *ORIGINAL);
+
+// Build & Fill the buckets
+List *build_buckets(int *bucket_bounds, int *bucket_array_sizes,
+				   const unsigned int ARRAY_SIZE, 
+				   const unsigned int NUMBER_OF_BUCKETS, 
+				   int *ORIGINAL);
 
 int main(int argc, char** argv) {
 	if (argc < 5) {
@@ -24,92 +53,38 @@ int main(int argc, char** argv) {
 	const unsigned int NUMBER_OF_PROCESSES = atoi(argv[3]);
 	const unsigned int PRINT_ORIGINAL = atoi(argv[4]);
 
-	int ORIGINAL[ARRAY_SIZE];
-
+	int *ORIGINAL = set_original(ARRAY_SIZE);
+	
 	int max_n = ARRAY_SIZE;
 	int min_n = 0;
 
-	// Bucket Bounds (NON-INCLUSIVE)
-
-	int bucket_bounds[NUMBER_OF_BUCKETS];
-	int bucket_std_size = ARRAY_SIZE / NUMBER_OF_BUCKETS;
-	int extra = ARRAY_SIZE % NUMBER_OF_BUCKETS;
-
-	if (extra) {
-			bucket_bounds[0] = bucket_std_size + 1;
-			--extra;
-		} else {
-			bucket_bounds[0] = bucket_std_size;
-		}
-
-	for (int i = 1 ; i < NUMBER_OF_BUCKETS; i++) {
-		if (extra) {
-			bucket_bounds[i] = bucket_bounds[i-1] + bucket_std_size + 1;
-			--extra;
-		} else {
-			bucket_bounds[i] = bucket_bounds[i-1] + bucket_std_size;
-		}
-	}
-
+	int *bucket_bounds = set_bounds(ARRAY_SIZE, NUMBER_OF_BUCKETS);
+	
 	//print_array(&NUMBER_OF_BUCKETS, bucket_bounds); //  DEBUG
 
-	// Count bucket sizes and store the Original array
-
-	int bucket_array_sizes[NUMBER_OF_BUCKETS];
-
-	for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
-		bucket_array_sizes[i] = 0;
-	}
-
-	for (int i = 0; i < ARRAY_SIZE; i++) {
-		if (scanf("%d", &ORIGINAL[i]) != 1) {
-			printf("Error reading Array\n");
-			exit(1);
-		}
-		for (int b = 0; b < NUMBER_OF_BUCKETS; b++) {
-			if (ORIGINAL[i] < bucket_bounds[b]) {
-				bucket_array_sizes[b]++;
-				break;
-			}
-		}
-	}
+	int *bucket_array_sizes = 
+	set_bucket_sizes(bucket_bounds, ARRAY_SIZE, NUMBER_OF_BUCKETS, ORIGINAL);
 
 	//print_array(&NUMBER_OF_BUCKETS, bucket_array_sizes); //  DEBUG
 
-	// Build & Fill the buckets
+	List *buckets = 
+	build_buckets(bucket_bounds, bucket_array_sizes, ARRAY_SIZE, NUMBER_OF_BUCKETS, ORIGINAL);
 
-	List buckets[NUMBER_OF_BUCKETS];
-	for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
-		intlist_init(&buckets[i], bucket_array_sizes[i]);
-	}
-
-	for (int i = 0; i < ARRAY_SIZE; i++) {
-		for (int b = 0; b < NUMBER_OF_BUCKETS; b++) {
-			if (ORIGINAL[i] < bucket_bounds[b]) {
-				intlist_append(&buckets[b], &ORIGINAL[i]);
-				break;
-			}
-		}
-	}
-
-
-
-
-
-	for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+	/*for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
 		print_array(&bucket_array_sizes[i], (buckets[i].int_list));  // DEBUG
-	}
+	}*/
 
-	// Print parameters
+	int rank;
+	MPI_Init(&argc, &argv);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-	printf("Array size : %u\n"
-		"Number of buckets: %u\n"
-		"Number of processes %u\n"
-		"Min: %i || Max: %i\n",
-		ARRAY_SIZE, NUMBER_OF_BUCKETS, NUMBER_OF_PROCESSES,
-		min_n, max_n);
+	// rank = 0, faz o bucket 0.
 
-	// Original array 
+	// demais ranks, cada um com o seu bucket especifico.
+
+	MPI_Finalize();
+
+	print_parameters(ARRAY_SIZE, NUMBER_OF_BUCKETS, NUMBER_OF_PROCESSES, min_n, max_n);
 
 	if (PRINT_ORIGINAL) {
 		print_array(&ARRAY_SIZE, ORIGINAL);
@@ -119,21 +94,19 @@ int main(int argc, char** argv) {
 
 	print_array(&ARRAY_SIZE, ORIGINAL);
 
-	// Find bucket bounds
-
-
-
-
-
-
-
-
-
-
-
-
-
 	return 0;
+}
+
+void print_parameters(const unsigned int ARRAY_SIZE,
+					  const unsigned int NUMBER_OF_BUCKETS,
+					  const unsigned int NUMBER_OF_PROCESSES, 
+					  int min_n, int max_n) {
+	printf("Array size : %u\n"
+		"Number of buckets: %u\n"
+		"Number of processes %u\n"
+		"Min: %i || Max: %i\n",
+		ARRAY_SIZE, NUMBER_OF_BUCKETS, NUMBER_OF_PROCESSES,
+		min_n, max_n);
 }
 
 void print_array(const unsigned int* size, int* array) {
@@ -158,4 +131,84 @@ int compare_int(const void *x, const void *y) {
 	int* _x = (int*) x;
 	int* _y = (int*) y;
 	return *_x - *_y;
+}
+
+int *set_original(const unsigned int ARRAY_SIZE) {
+	int *ORIGINAL = malloc(sizeof(int) * ARRAY_SIZE);
+	for (int i = 0; i < ARRAY_SIZE; i++) {
+		if (scanf("%d", &ORIGINAL[i]) != 1) {
+			printf("Error reading Array\n");
+			exit(1);
+		}
+	}
+	return ORIGINAL;
+}
+
+int *set_bounds(const unsigned int ARRAY_SIZE, 
+				const unsigned int NUMBER_OF_BUCKETS) {
+
+	int *bucket_bounds = malloc(sizeof(int) * NUMBER_OF_BUCKETS);
+
+	int bucket_std_size = ARRAY_SIZE / NUMBER_OF_BUCKETS;
+	int extra = ARRAY_SIZE % NUMBER_OF_BUCKETS;
+
+	if (extra) {
+			bucket_bounds[0] = bucket_std_size + 1;
+			--extra;
+		} else {
+			bucket_bounds[0] = bucket_std_size;
+		}
+
+	for (int i = 1 ; i < NUMBER_OF_BUCKETS; i++) {
+		if (extra) {
+			bucket_bounds[i] = bucket_bounds[i-1] + bucket_std_size + 1;
+			--extra;
+		} else {
+			bucket_bounds[i] = bucket_bounds[i-1] + bucket_std_size;
+		}
+	}
+	return bucket_bounds;
+}
+
+int *set_bucket_sizes(int *bucket_bounds,
+				      const unsigned int ARRAY_SIZE,
+				      const unsigned int NUMBER_OF_BUCKETS,
+				      int *ORIGINAL) {
+
+	int *bucket_array_sizes = malloc(sizeof(int) * NUMBER_OF_BUCKETS);
+
+	for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+		bucket_array_sizes[i] = 0;
+	}
+	for (int i = 0; i < ARRAY_SIZE; i++) {
+		for (int b = 0; b < NUMBER_OF_BUCKETS; b++) {
+			if (ORIGINAL[i] < bucket_bounds[b]) {
+				bucket_array_sizes[b]++;
+				break;
+			}
+		}
+	}
+	return bucket_array_sizes;
+}
+
+List *build_buckets(int *bucket_bounds, int *bucket_array_sizes,
+				   const unsigned int ARRAY_SIZE, 
+				   const unsigned int NUMBER_OF_BUCKETS, 
+				   int *ORIGINAL) {
+
+	List *buckets = malloc(sizeof(List) * NUMBER_OF_BUCKETS);
+
+	for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+		intlist_init(&buckets[i], bucket_array_sizes[i]);
+	}
+
+	for (int i = 0; i < ARRAY_SIZE; i++) {
+		for (int b = 0; b < NUMBER_OF_BUCKETS; b++) {
+			if (ORIGINAL[i] < bucket_bounds[b]) {
+				intlist_append(&buckets[b], &ORIGINAL[i]);
+				break;
+			}
+		}
+	}
+	return buckets;
 }
