@@ -4,6 +4,8 @@
 #include <float.h>
 #include <stdlib.h>
 
+#include "intlist.h"
+
 void print_array(const unsigned int*, int*);
 int compare_double(const void *x, const void *y);
 int compare_int(const void *x, const void *y);
@@ -24,15 +26,8 @@ int main(int argc, char** argv) {
 
 	int ORIGINAL[ARRAY_SIZE];
 
-	double max_n = ARRAY_SIZE;
-	double min_n = 0;
-
-	for (int i = 0; i < ARRAY_SIZE; i++) {
-		if (scanf("%d", &ORIGINAL[i]) != 1) {
-			printf("Error reading Array\n");
-			exit(1);
-		}
-	}
+	int max_n = ARRAY_SIZE;
+	int min_n = 0;
 
 	// Bucket Bounds (NON-INCLUSIVE)
 
@@ -56,23 +51,58 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	//print_array(&NUMBER_OF_BUCKETS, bucket_bounds); #  DEBUG
+	//print_array(&NUMBER_OF_BUCKETS, bucket_bounds); //  DEBUG
+
+	// Count bucket sizes and store the Original array
+
+	int bucket_array_sizes[NUMBER_OF_BUCKETS];
+
+	for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+		bucket_array_sizes[i] = 0;
+	}
+
+	for (int i = 0; i < ARRAY_SIZE; i++) {
+		if (scanf("%d", &ORIGINAL[i]) != 1) {
+			printf("Error reading Array\n");
+			exit(1);
+		}
+		for (int b = 0; b < NUMBER_OF_BUCKETS; b++) {
+			if (ORIGINAL[i] < bucket_bounds[b]) {
+				bucket_array_sizes[b]++;
+				break;
+			}
+		}
+	}
+
+	//print_array(&NUMBER_OF_BUCKETS, bucket_array_sizes); //  DEBUG
+
+	// Build & Fill the buckets
+
+
+	/* Segfault
+	List* buckets[NUMBER_OF_BUCKETS];
+	for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+		intlist_init(buckets[i], bucket_array_sizes[i]);
+	}*/
+
+
+
+
+
+	//for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+//		print_array(&(bucket_array_sizes[i]), buckets[i]);
+	//}
 
 	// Print parameters
 
 	printf("Array size : %u\n"
 		"Number of buckets: %u\n"
 		"Number of processes %u\n"
-		"Min: %f || Max: %f\n",
+		"Min: %i || Max: %i\n",
 		ARRAY_SIZE, NUMBER_OF_BUCKETS, NUMBER_OF_PROCESSES,
 		min_n, max_n);
 
-
-	// Bucket 
-
-
-
-
+	// Original array 
 
 	if (PRINT_ORIGINAL) {
 		print_array(&ARRAY_SIZE, ORIGINAL);
