@@ -99,6 +99,8 @@ int main(int argc, char** argv) {
 	List *buckets = 
 	build_buckets(bucket_bounds, bucket_array_sizes, ARRAY_SIZE, NUMBER_OF_BUCKETS, ORIGINAL);
 
+	int* bucket_size_buffer;
+
 	/*for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
 		print_array(&bucket_array_sizes[i], (buckets[i].int_list));  // DEBUG
 	}*/
@@ -128,8 +130,9 @@ int main(int argc, char** argv) {
 
 		// distribuindo um bucket para todos os processos
 		for (int i = 1; i < size && (buckets_remaning != 0) ; i++) {
-			MPI_Send(&buckets[i].int_list, bucket_array_sizes[i], MPI_INT, i, 0, MPI_COMM_WORLD);
-			printf("Rank 0 sended a bucket to Rank %i\n", i);
+			MPI_Send(&bucket_array_sizes[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD); // envia tamanho do array
+			MPI_Send(&buckets[i].int_list, bucket_array_sizes[i], MPI_INT, i, 0, MPI_COMM_WORLD); // envia o array
+			printf("Rank 0 sent a bucket to Rank %i\n", i);
 			buckets_remaning--;
 		}
 
@@ -166,10 +169,17 @@ int main(int argc, char** argv) {
 
 	// recebe os buckets e ordena ate receber bcast do 
 	else {
-/*		while(true) {
-			MPI_Send(&rank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
+		while(true) {
+			MPI_Recv(&bucket_size_buffer, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status); // guarda o tamanho do array
+			// break if tag = -1
+			if (status.MPI_TAG == -1) {
+				break;
+			}
+			MPI_Recv(&ORIGINAL, bucket_size_buffer, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status)  // reusa o vetor original
+			qsort(&ORIGINAL, bucket_size_buffer, sizeof(int), compare_int); // sort o array
 			printf("Rank %i recv a bucket from Rank 0\n", rank);
-		}*/
+			MPI_Send(&ORIGINAL, bucket_size_buffer, MPI_INT, 0, status.MPI_TAG, MPI_COMM_WORLD); // devolve o array sorted com a tag = bucket
+		}
 	}
 
 	// MPI_File_close(&array_file);
