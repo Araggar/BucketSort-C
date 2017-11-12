@@ -12,6 +12,8 @@ void print_parameters(const unsigned int ARRAY_SIZE,
 					  const unsigned int NUMBER_OF_BUCKETS,
 					  int min_n, int max_n);
 
+void print_buckets(const unsigned int size, int* array);
+
 // Original array 
 void print_array(const unsigned int*, int*);
 
@@ -97,6 +99,10 @@ int main(int argc, char** argv) {
 	List *buckets = 
 	build_buckets(bucket_bounds, bucket_array_sizes, ARRAY_SIZE, NUMBER_OF_BUCKETS, ORIGINAL);
 
+	/*for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+		print_array(&bucket_array_sizes[i], (buckets[i].int_list));  // DEBUG
+	}*/
+
 	// -----------------------------------------------------------------------------------
 
 
@@ -112,20 +118,15 @@ int main(int argc, char** argv) {
 
 		// se tiver só um processo
 		if (size == 1) {
-			for (int i = 0; i < buckets_remaning; i++) {
+			for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
 				qsort(buckets[i].int_list, bucket_array_sizes[i], sizeof(int), compare_int);
 			}
 			buckets_remaning = 0;
 		}
 
 		// send message
-			
-			//MPI_Isend(&buckets[bucket_sort].int_list, bucket_array_sizes[bucket_sort], MPI_INT, rank_process, 0, MPI_COMM_WORLD, &request);
-			//bucket_sort++;
-			//buckets_remaning--;
-			//MPI_Irecv(&buckets[bucket_sort].int_list, bucket_array_sizes[bucket_sort], MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request);
 
-		// distribuindo para todos os processos um bucket
+		// distribuindo um bucket para todos os processos
 		for (int i = 1; i < size && (buckets_remaning != 0) ; i++) {
 			MPI_Send(&buckets[i].int_list, bucket_array_sizes[i], MPI_INT, i, 0, MPI_COMM_WORLD);
 			printf("Rank 0 sended a bucket to Rank %i\n", i);
@@ -133,9 +134,15 @@ int main(int argc, char** argv) {
 		}
 
 		while (buckets_remaning != 0) {
+			// recebe de um escravo
+
 			int bucket_id;
 			MPI_Recv(&bucket_id, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 			MPI_Recv(&buckets[bucket_id].int_list, bucket_array_sizes[bucket_id], MPI_INT, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+			//envia para esse mesmo escravo um novo bucket
+
+			// MPI_Send();
 		}
 
 		// bcast 
@@ -151,13 +158,16 @@ int main(int argc, char** argv) {
 			print_array(&ARRAY_SIZE, ORIGINAL);
 		}
 
-		print_array(&ARRAY_SIZE, ORIGINAL);
+		for (int i = 0; i < NUMBER_OF_BUCKETS; i++)
+			print_buckets(bucket_array_sizes[i], buckets[i].int_list);
+
+		//print_array(&ARRAY_SIZE, ORIGINAL);
 	}
 
 	// recebe os buckets e ordena ate receber bcast do 
 	else {
 /*		while(true) {
-			MPI_Recv(&rank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
+			MPI_Send(&rank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
 			printf("Rank %i recv a bucket from Rank 0\n", rank);
 		}*/
 	}
@@ -176,6 +186,12 @@ void print_parameters(const unsigned int ARRAY_SIZE,
 		"Min: %i || Max: %i\n",
 		ARRAY_SIZE, NUMBER_OF_BUCKETS,
 		min_n, max_n);
+}
+
+void print_buckets(const unsigned int size, int* array) {
+	for (int i = 0; i < size; i++) {
+		printf("%d, ", array[i]);
+	}
 }
 
 void print_array(const unsigned int* size, int* array) {
