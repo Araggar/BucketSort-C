@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
 	int max_n = ARRAY_SIZE;
 	int min_n = 0;
 
+	int bucket_id = 0;
 	int rank, size, ierr;
 	MPI_Status status;
 	MPI_File array_file;
@@ -130,7 +131,7 @@ int main(int argc, char** argv) {
 
 		// distribuindo um bucket para todos os processos
 		for (int i = 1; i < size && (current_bucket != NUMBER_OF_BUCKETS) ; i++) {
-			MPI_Send(&i, 1, MPI_INT, i, 0, MPI_COMM_WORLD); // envia id do bucket
+			MPI_Send(&current_bucket, 1, MPI_INT, i, 0, MPI_COMM_WORLD); // envia id do bucket
 			printf("Rank 0 sent a bucket to Rank %i\n", i);
 			current_bucket++;
 		}
@@ -138,7 +139,6 @@ int main(int argc, char** argv) {
 		while (current_bucket != NUMBER_OF_BUCKETS) {
 			// recebe de um escravo
 
-			int bucket_id;
 			MPI_Recv(&bucket_id, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &status);
 			MPI_Recv(&buckets[bucket_id].int_list, bucket_array_sizes[bucket_id], MPI_INT, status.MPI_SOURCE, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
@@ -147,7 +147,6 @@ int main(int argc, char** argv) {
 			MPI_Send(&current_bucket, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
 
 			current_bucket++;
-			printf(" current_bucket %i\n", current_bucket);
 		}
 
 		// bcast
@@ -175,16 +174,16 @@ int main(int argc, char** argv) {
 
 	// recebe os buckets e ordena ate receber bcast do 
 	else {
-		while(true) {
+		while(1 == 1) {
 			MPI_Recv(&bucket_id, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // guarda o tamanho do array
 			// break if tag = -1
 			if (bucket_id == -1) {
 				break;
 			}
 			qsort(buckets[bucket_id].int_list, bucket_array_sizes[bucket_id], sizeof(int), compare_int); // sort o array
-			printf("Rank %i recv a bucket from Rank 0\n", rank);
+			printf("Rank %i recv the bucket %i, from Rank 0\n", rank, bucket_id);
 			MPI_Send(&bucket_id, 1, MPI_INT, 0, 1, MPI_COMM_WORLD); // devolve o array sorted com a tag = bucket
-			MPI_Send(&ORIGINAL, bucket_id, MPI_INT, 2, status.MPI_TAG, MPI_COMM_WORLD); // devolve o array sorted com a tag = bucket
+			MPI_Send(&ORIGINAL, bucket_id, MPI_INT, 0, 2, MPI_COMM_WORLD); // devolve o array sorted com a tag = bucket
 		}
 	}
 
