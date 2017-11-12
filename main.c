@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
 	int max_n = ARRAY_SIZE;
 	int min_n = 0;
 
+	int bucket_id = 0;
 	int rank, size, ierr;
 	MPI_Status status;
 	MPI_File array_file;
@@ -150,8 +151,7 @@ int main(int argc, char** argv) {
 
 		while (current_bucket != NUMBER_OF_BUCKETS) {
 			// recebe de um escravo
-
-			
+      
 			MPI_Recv(&bucket_id, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &status);
 			MPI_Recv(&buckets[bucket_id].int_list, bucket_array_sizes[bucket_id], MPI_INT, status.MPI_SOURCE, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
@@ -163,7 +163,6 @@ int main(int argc, char** argv) {
 				current_bucket++;
 			}
 			current_bucket++;
-			printf(" current_bucket %i\n", current_bucket);
 		}
 
 		// bcast
@@ -198,7 +197,7 @@ int main(int argc, char** argv) {
 				break;
 			}
 			qsort(buckets[bucket_id].int_list, bucket_array_sizes[bucket_id], sizeof(int), compare_int); // sort o array
-			printf("Rank %i recv a bucket from Rank 0\n", rank);
+			printf("Rank %i recv the bucket %i, from Rank 0\n", rank, bucket_id);
 			MPI_Send(&bucket_id, 1, MPI_INT, 0, 1, MPI_COMM_WORLD); // devolve o array sorted com a tag = bucket
 			MPI_Send(&ORIGINAL, bucket_id, MPI_INT, 0, 2, MPI_COMM_WORLD); // devolve o array sorted com a tag = bucket
 		}
