@@ -92,6 +92,8 @@ int main(int argc, char** argv) {
     ORIGINAL[6] = 3;*/
 
     int *bucket_bounds = set_bounds(ARRAY_SIZE, NUMBER_OF_BUCKETS);
+    		unsigned int remaining_buckets = NUMBER_OF_BUCKETS;
+
 		
 	//print_array(&NUMBER_OF_BUCKETS, bucket_bounds); //  DEBUG
 
@@ -131,6 +133,7 @@ int main(int argc, char** argv) {
 				}
 			}
 			current_bucket = NUMBER_OF_BUCKETS;
+			remaining_buckets = 0;
 		}
 
 		// send message
@@ -143,7 +146,6 @@ int main(int argc, char** argv) {
 			}
 			current_bucket++;
 		}
-		unsigned int remaining_buckets = NUMBER_OF_BUCKETS;
 		while (remaining_buckets != 0) {
 			// recebe de um escravo			
 			MPI_Recv(&bucket_id, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &status);
@@ -181,7 +183,7 @@ int main(int argc, char** argv) {
 			print_array(&ARRAY_SIZE, ORIGINAL);
 		}
 
-		printf("%i",*buckets[2].int_list);
+		//printf("%i",*buckets[2].int_list);
 		//print_array(&bucket_array_sizes[1], buckets[0].int_list);
 		
 		/*for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
@@ -194,8 +196,8 @@ int main(int argc, char** argv) {
 			ORIGINAL[bucket_bounds[i-1]] = *buckets[i].int_list;
 		}*/
 
-		/*for (int i = 0; i < NUMBER_OF_BUCKETS; i++)
-			print_buckets(bucket_array_sizes[i], buckets[i].int_list);*/
+		for (int i = 0; i < NUMBER_OF_BUCKETS; i++)
+			print_buckets(bucket_array_sizes[i], buckets[i].int_list);
 
 		printf("\n");
 
