@@ -73,55 +73,79 @@ int main(int argc, char** argv) {
 
 	MPI_Bcast(&ORIGINAL, ARRAY_SIZE, MPI_INT, 0, MPI_COMM_WORLD);
 
-	/*ierr = MPI_File_open(MPI_COMM_WORLD, argv[4], MPI_MODE_RDONLY, MPI_INFO_NULL, &array_file);
-    if (ierr) {
-        if (rank == 0) fprintf(stderr, "%s: Couldn't open file %s\n", argv[0], argv[1]);
-        MPI_Finalize();
-        exit(2);
-    }*/
-
     // -------------------------------------------------------------------------------------
 
-    /*int *ORIGINAL = calloc(ARRAY_SIZE, sizeof(int));
-    ORIGINAL[0] = 1;
-    ORIGINAL[1] = 4;
-    ORIGINAL[2] = 4;
-    ORIGINAL[3] = 6;
-    ORIGINAL[4] = 1;
-    ORIGINAL[5] = 2;
-    ORIGINAL[6] = 3;*/
+    int bucket_bounds[NUMBER_OF_BUCKETS];
 
-    int *bucket_bounds = set_bounds(ARRAY_SIZE, NUMBER_OF_BUCKETS);
-    		unsigned int remaining_buckets = NUMBER_OF_BUCKETS;
+	int bucket_std_size = ARRAY_SIZE / NUMBER_OF_BUCKETS;
+	int extra = ARRAY_SIZE % NUMBER_OF_BUCKETS;
 
-		
+	if (extra) {
+			bucket_bounds[0] = bucket_std_size + 1;
+			--extra;
+		} else {
+			bucket_bounds[0] = bucket_std_size;
+		}
+
+	for (int i = 1 ; i < NUMBER_OF_BUCKETS; i++) {
+		if (extra) {
+			bucket_bounds[i] = bucket_bounds[i-1] + bucket_std_size + 1;
+			--extra;
+		} else {
+			bucket_bounds[i] = bucket_bounds[i-1] + bucket_std_size;
+		}
+	}
+
 	//print_array(&NUMBER_OF_BUCKETS, bucket_bounds); //  DEBUG
 
-	int *bucket_array_sizes = 
-	set_bucket_sizes(bucket_bounds, ARRAY_SIZE, NUMBER_OF_BUCKETS, ORIGINAL);
+	// -------------------------------------------------------------------------------------
+
+	int bucket_array_sizes[NUMBER_OF_BUCKETS];
+
+	for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+		bucket_array_sizes[i] = 0;
+	}
+	for (int i = 0; i < ARRAY_SIZE; i++) {
+		for (int b = 0; b < NUMBER_OF_BUCKETS; b++) {
+			if (ORIGINAL[i] < bucket_bounds[b]) {
+				bucket_array_sizes[b]++;
+				break;
+			}
+		}
+	}
 
 	//print_array(&NUMBER_OF_BUCKETS, bucket_array_sizes); //  DEBUG
 
-	List *buckets = 
-	build_buckets(bucket_bounds, bucket_array_sizes, ARRAY_SIZE, NUMBER_OF_BUCKETS, ORIGINAL);
+	// -------------------------------------------------------------------------------------
 
-	int* bucket_tag_buffer;
-	int bucket_id;
+	List buckets[NUMBER_OF_BUCKETS];
+
+	for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+		intlist_init(&buckets[i], bucket_array_sizes[i]);
+	}
+
+	for (int i = 0; i < ARRAY_SIZE; i++) {
+		for (int b = 0; b < NUMBER_OF_BUCKETS; b++) {
+			if (ORIGINAL[i] < bucket_bounds[b]) {
+				intlist_append(&buckets[b], &ORIGINAL[i]);
+				break;
+			}
+		}
+	}
 
 	/*for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
 		print_array(&bucket_array_sizes[i], (buckets[i].int_list));  // DEBUG
 	}*/
 
-	// -----------------------------------------------------------------------------------
+	// -------------------------------------------------------------------------------------
+		
+	int* bucket_tag_buffer;
+	int bucket_id;
+	unsigned int remaining_buckets = NUMBER_OF_BUCKETS;
 
+	// ------------------------------------------------------------------------------------
 
 	if (rank == 0) {
-
-		/*MPI_Offset filesize;
-		ORIGINAL = malloc(sizeof(int) * filesize);
-		MPI_File_get_size(array_file, &filesize);
-		MPI_File_read(array_file, ORIGINAL, filesize, MPI_INT, MPI_STATUS_IGNORE);*/
-
 
 		print_parameters(ARRAY_SIZE, NUMBER_OF_BUCKETS, min_n, max_n);
 
@@ -146,6 +170,7 @@ int main(int argc, char** argv) {
 			}
 			current_bucket++;
 		}
+
 		while (remaining_buckets != 0) {
 			// recebe de um escravo			
 			MPI_Recv(&bucket_id, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &status);
@@ -171,13 +196,6 @@ int main(int argc, char** argv) {
 		for (int i = 1; i < size; i++) {
 			MPI_Send(&bucket_id, 1, MPI_INT, i, 0, MPI_COMM_WORLD); // sinaliza os processos que nao existem mais buckets
 		}
-
-		 
-
-	/*	for (int i = 1; (i < size + 1) ; i++)
-			MPI_Irecv(&buckets[i], bucket_array_sizes[i], MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request);*/
-
-		// MPI_Wait(&request, MPI_STATUS_IGNORE);
 
 		if (PRINT_ORIGINAL) {
 			print_array(&ARRAY_SIZE, ORIGINAL);
@@ -219,7 +237,6 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	// MPI_File_close(&array_file);
 	MPI_Finalize();
 
 	return 0;
