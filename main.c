@@ -68,6 +68,7 @@ int main(int argc, char** argv) {
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
+	int ORIGINAL[ARRAY_SIZE];
 
 	/*ierr = MPI_File_open(MPI_COMM_WORLD, argv[4], MPI_MODE_RDONLY, MPI_INFO_NULL, &array_file);
     if (ierr) {
@@ -78,14 +79,14 @@ int main(int argc, char** argv) {
 
     // -------------------------------------------------------------------------------------
 
-    int *ORIGINAL = calloc(ARRAY_SIZE, sizeof(int));
+    /*int *ORIGINAL = calloc(ARRAY_SIZE, sizeof(int));
     ORIGINAL[0] = 1;
     ORIGINAL[1] = 4;
     ORIGINAL[2] = 4;
     ORIGINAL[3] = 6;
     ORIGINAL[4] = 1;
     ORIGINAL[5] = 2;
-    ORIGINAL[6] = 3;
+    ORIGINAL[6] = 3;*/
 
     int *bucket_bounds = set_bounds(ARRAY_SIZE, NUMBER_OF_BUCKETS);
 		
@@ -115,7 +116,14 @@ int main(int argc, char** argv) {
 		ORIGINAL = malloc(sizeof(int) * filesize);
 		MPI_File_get_size(array_file, &filesize);
 		MPI_File_read(array_file, ORIGINAL, filesize, MPI_INT, MPI_STATUS_IGNORE);*/
+		for (int i = 0; i < ARRAY_SIZE; i++) {
+			if (scanf("%d", &ORIGINAL[i]) != 1) {
+				printf("Error reading Array\n");
+				exit(1);
+			}
+		}
 
+	MPI_Bcast(&ORIGINAL, ARRAY_SIZE, MPI_INT, 0, MPI_COMM_WORLD);
 
 		print_parameters(ARRAY_SIZE, NUMBER_OF_BUCKETS, min_n, max_n);
 
