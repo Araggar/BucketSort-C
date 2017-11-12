@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
 		}
 	}
 */
-	unsigned int current_bucket = 1;
+	unsigned int current_bucket = 0;
 	int max_n = ARRAY_SIZE;
 	int min_n = 0;
 
@@ -69,6 +69,7 @@ int main(int argc, char** argv) {
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
+	int ORIGINAL[ARRAY_SIZE];
 
 	/*ierr = MPI_File_open(MPI_COMM_WORLD, argv[4], MPI_MODE_RDONLY, MPI_INFO_NULL, &array_file);
     if (ierr) {
@@ -79,14 +80,14 @@ int main(int argc, char** argv) {
 
     // -------------------------------------------------------------------------------------
 
-    int *ORIGINAL = calloc(ARRAY_SIZE, sizeof(int));
+    /*int *ORIGINAL = calloc(ARRAY_SIZE, sizeof(int));
     ORIGINAL[0] = 1;
     ORIGINAL[1] = 4;
     ORIGINAL[2] = 4;
     ORIGINAL[3] = 6;
     ORIGINAL[4] = 1;
     ORIGINAL[5] = 2;
-    ORIGINAL[6] = 3;
+    ORIGINAL[6] = 3;*/
 
     int *bucket_bounds = set_bounds(ARRAY_SIZE, NUMBER_OF_BUCKETS);
 		
@@ -101,6 +102,7 @@ int main(int argc, char** argv) {
 	build_buckets(bucket_bounds, bucket_array_sizes, ARRAY_SIZE, NUMBER_OF_BUCKETS, ORIGINAL);
 
 	int* bucket_tag_buffer;
+	int bucket_id;
 
 	/*for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
 		print_array(&bucket_array_sizes[i], (buckets[i].int_list));  // DEBUG
@@ -115,14 +117,23 @@ int main(int argc, char** argv) {
 		ORIGINAL = malloc(sizeof(int) * filesize);
 		MPI_File_get_size(array_file, &filesize);
 		MPI_File_read(array_file, ORIGINAL, filesize, MPI_INT, MPI_STATUS_IGNORE);*/
+		for (int i = 0; i < ARRAY_SIZE; i++) {
+			if (scanf("%d", &ORIGINAL[i]) != 1) {
+				printf("Error reading Array\n");
+				exit(1);
+			}
+		}
 
+	MPI_Bcast(&ORIGINAL, ARRAY_SIZE, MPI_INT, 0, MPI_COMM_WORLD);
 
 		print_parameters(ARRAY_SIZE, NUMBER_OF_BUCKETS, min_n, max_n);
 
 		// se tiver só um processo
 		if (size == 1) {
 			for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
-				qsort(buckets[i].int_list, bucket_array_sizes[i], sizeof(int), compare_int);
+				if (bucket_array_sizes[i] != 0) {
+					qsort(buckets[i].int_list, bucket_array_sizes[i], sizeof(int), compare_int);
+				}
 			}
 			current_bucket = NUMBER_OF_BUCKETS;
 		}
@@ -131,21 +142,26 @@ int main(int argc, char** argv) {
 
 		// distribuindo um bucket para todos os processos
 		for (int i = 1; i < size && (current_bucket != NUMBER_OF_BUCKETS) ; i++) {
-			MPI_Send(&current_bucket, 1, MPI_INT, i, 0, MPI_COMM_WORLD); // envia id do bucket
-			printf("Rank 0 sent a bucket to Rank %i\n", i);
+			if (bucket_array_sizes[current_bucket]) {
+				MPI_Send(&current_bucket, 1, MPI_INT, i, 0, MPI_COMM_WORLD); // envia id do bucket
+				printf("Rank 0 sent a bucket to Rank %i\n", i);
+			}
 			current_bucket++;
 		}
 
 		while (current_bucket != NUMBER_OF_BUCKETS) {
 			// recebe de um escravo
-
+      
 			MPI_Recv(&bucket_id, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &status);
 			MPI_Recv(&buckets[bucket_id].int_list, bucket_array_sizes[bucket_id], MPI_INT, status.MPI_SOURCE, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
 			//envia para esse mesmo escravo um novo bucket
-
-			MPI_Send(&current_bucket, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
-
+			while (current_bucket < NUMBER_OF_BUCKETS) {
+				if (bucket_array_sizes[current_bucket]) {
+					MPI_Send(&current_bucket, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
+				}
+				current_bucket++;
+			}
 			current_bucket++;
 		}
 
@@ -174,7 +190,7 @@ int main(int argc, char** argv) {
 
 	// recebe os buckets e ordena ate receber bcast do 
 	else {
-		while(1 == 1) {
+		while(1) {
 			MPI_Recv(&bucket_id, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // guarda o tamanho do array
 			// break if tag = -1
 			if (bucket_id == -1) {
