@@ -170,48 +170,62 @@ int main(int argc, char** argv) {
 			// send message
 
 			// distribuindo um bucket para todos os processos
-			if (size > NUMBER_OF_BUCKETS)
-				size = NUMBER_OF_BUCKETS;
-
-			for (int i = 1; i < size ; i++) {
-				if (bucket_array_sizes[current_bucket]) {
-					MPI_Send(&current_bucket, 1, MPI_INT, i, 0, MPI_COMM_WORLD); // envia id do bucket
-					//printf("Rank 0 sent a bucket to Rank %i\n", i);
-				}
-				current_bucket++;
-			}
-
-			while (remaining_buckets != 0 && current_bucket <= NUMBER_OF_BUCKETS) { //remaining_buckets != 0
-				// recebe de um escravo			
-				MPI_Recv(&bucket_id, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &status);
-				//printf("Received bucket : %i\n", bucket_id);
-				MPI_Recv(buckets[bucket_id].int_list, bucket_array_sizes[bucket_id], MPI_INT, status.MPI_SOURCE, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-				/*for (int i = 0; i < NUMBER_OF_BUCKETS; i++)
-					print_buckets(bucket_array_sizes[i], buckets[i].int_list);
-				printf("\n");*/
-				//print_array(&bucket_array_sizes[bucket_id], buckets[bucket_id].int_list);
-				// fflush(stdout);
-				remaining_buckets--;
-
-				//envia para esse mesmo escravo um novo bucket
-
-				while (remaining_buckets != 0 && current_bucket <= NUMBER_OF_BUCKETS) {
+			if (size > NUMBER_OF_BUCKETS) {
+				for (int i = 1; i < NUMBER_OF_BUCKETS + 1; i++) {
 					if (bucket_array_sizes[current_bucket]) {
-						// printf("sending %i\n", current_bucket);
-						MPI_Send(&current_bucket, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
-						current_bucket++;
-						break;
+						MPI_Send(&current_bucket, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
 					}
 					current_bucket++;
+				}
+
+				while (remaining_buckets != 0) {
+					MPI_Recv(&bucket_id, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &status);
+					MPI_Recv(buckets[bucket_id].int_list, bucket_array_sizes[bucket_id], MPI_INT, status.MPI_SOURCE, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 					remaining_buckets--;
+				}
+
+			} else {
+
+				for (int i = 1; i < size ; i++) {
+					if (bucket_array_sizes[current_bucket]) {
+						MPI_Send(&current_bucket, 1, MPI_INT, i, 0, MPI_COMM_WORLD); // envia id do bucket
+						//printf("Rank 0 sent a bucket to Rank %i\n", i);
+					}
+					current_bucket++;
+				}
+
+				while (remaining_buckets != 0 && current_bucket <= NUMBER_OF_BUCKETS) { //remaining_buckets != 0
+					// recebe de um escravo			
+					MPI_Recv(&bucket_id, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &status);
+					//printf("Received bucket : %i\n", bucket_id);
+					MPI_Recv(buckets[bucket_id].int_list, bucket_array_sizes[bucket_id], MPI_INT, status.MPI_SOURCE, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+					/*for (int i = 0; i < NUMBER_OF_BUCKETS; i++)
+						print_buckets(bucket_array_sizes[i], buckets[i].int_list);
+					printf("\n");*/
+					//print_array(&bucket_array_sizes[bucket_id], buckets[bucket_id].int_list);
+					// fflush(stdout);
+					remaining_buckets--;
+
+					//envia para esse mesmo escravo um novo bucket
+
+					while (remaining_buckets != 0 && current_bucket <= NUMBER_OF_BUCKETS) {
+						if (bucket_array_sizes[current_bucket]) {
+							// printf("sending %i\n", current_bucket);
+							MPI_Send(&current_bucket, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
+							current_bucket++;
+							break;
+						}
+						current_bucket++;
+						remaining_buckets--;
+					}
 				}
 			}
 		}
 
 		bucket_id = -1;
-			for (int i = 1; i < size; i++) {
-				MPI_Send(&bucket_id, 1, MPI_INT, i, 0, MPI_COMM_WORLD); // sinaliza os processos que nao existem mais buckets
-			}
+		for (int i = 1; i < size; i++) {
+			MPI_Send(&bucket_id, 1, MPI_INT, i, 0, MPI_COMM_WORLD); // sinaliza os processos que nao existem mais buckets
+		}
 
 		if (PRINT_ORIGINAL) {
 			print_array(&ARRAY_SIZE, ORIGINAL);
