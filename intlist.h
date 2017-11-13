@@ -6,6 +6,6 @@ typedef struct IntList {
 	int index;
 } List;
 
-void intlist_init(List*, int);
+void intlist_init(List*, int, int*);
 void intlist_append(List*, int*);
 #endif

@@ -4,6 +4,7 @@
 #include <float.h>
 #include <stdlib.h>
 #include <mpi.h>
+#include <string.h>
 
 #include "intlist.h"
 
@@ -132,6 +133,9 @@ int main(int argc, char** argv) {
 		}
 	}
 
+	//for (int i = 0; i < NUMBER_OF_BUCKETS; i++)
+	//		print_buckets(bucket_array_sizes[i], buckets[i].int_list);
+
 	/*for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
 		print_array(&bucket_array_sizes[i], (buckets[i].int_list));  // DEBUG
 	}*/
@@ -148,6 +152,9 @@ int main(int argc, char** argv) {
 	if (rank == 0) {
 
 		print_parameters(ARRAY_SIZE, NUMBER_OF_BUCKETS, min_n, max_n);
+		if (PRINT_ORIGINAL) {
+			print_array(&ARRAY_SIZE, ORIGINAL);
+		}
 
 		// se tiver só um processo
 		if (size == 1) {
@@ -171,11 +178,12 @@ int main(int argc, char** argv) {
 				current_bucket++;
 			}
 
-			while (remaining_buckets != 0) {
+			while (1) { //remaining_buckets != 0
 				// recebe de um escravo			
 				MPI_Recv(&bucket_id, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &status);
-				MPI_Recv(&(buckets[bucket_id].int_list), bucket_array_sizes[bucket_id], MPI_INT, status.MPI_SOURCE, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 				printf("Received bucket : %i\n", bucket_id);
+				MPI_Recv(buckets[current_bucket].int_list, bucket_array_sizes[bucket_id], MPI_INT, status.MPI_SOURCE, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				print_array(&bucket_array_sizes[bucket_id], buckets[current_bucket].int_list);
 				fflush(stdout);
 				remaining_buckets--;
 
@@ -184,11 +192,12 @@ int main(int argc, char** argv) {
 			// ********************************************************************************************************
 				// só tem que enviar um bucket...
 				// tava : while (current_bucket < NUMBER_OF_BUCKETS)
-				int send = 0;
-				while (send == 0) {
+				while (remaining_buckets != 0 && current_bucket <= NUMBER_OF_BUCKETS) {
 					if (bucket_array_sizes[current_bucket]) {
+						printf("sending %i\n", current_bucket);
 						MPI_Send(&current_bucket, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
-						send = 1;
+						current_bucket++;
+						break;
 					}
 					current_bucket++;
 					remaining_buckets--;
@@ -223,8 +232,8 @@ int main(int argc, char** argv) {
 			ORIGINAL[bucket_bounds[i-1]] = *buckets[i].int_list;
 		}*/
 
-		for (int i = 0; i < NUMBER_OF_BUCKETS; i++)
-			print_buckets(bucket_array_sizes[i], buckets[i].int_list);
+		//for (int i = 0; i < NUMBER_OF_BUCKETS; i++)
+		//	print_buckets(bucket_array_sizes[i], buckets[i].int_list);
 
 		printf("\n");
 
@@ -235,19 +244,22 @@ int main(int argc, char** argv) {
 	else {
 		while(1) {
 			MPI_Recv(&current_bucket, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // guarda o tamanho do array
+			print_array(&bucket_array_sizes[current_bucket], buckets[current_bucket].int_list);
 			// break if tag = -1
 			if (current_bucket == -1) {
 				break;
 			}
 			qsort(buckets[current_bucket].int_list, bucket_array_sizes[current_bucket], sizeof(int), compare_int); // sort o array
+			print_array(&bucket_array_sizes[current_bucket], buckets[current_bucket].int_list);
 			//printf("Rank %i recv a bucket from Rank 0\n", rank);
 			MPI_Send(&current_bucket, 1, MPI_INT, 0, 1, MPI_COMM_WORLD); // devolve o array sorted com a tag = bucket
+			printf("CURRENT BUCKET %i\n", current_bucket);
 
 			// ********************************************************************************************************
 			// esta dando sort no bucket e esta enviando o ORIGINAL?
 			// como deveria ser : MPI_Send(&(buckets[current_bucket].int_list), bucket_array_sizes[current_bucket], MPI_INT, 0, 2, MPI_COMM_WORLD);
 
-			MPI_Send(&ORIGINAL, current_bucket, MPI_INT, 0, 2, MPI_COMM_WORLD); // devolve o array sorted com a tag = bucket
+			MPI_Send(buckets[current_bucket].int_list, bucket_array_sizes[current_bucket], MPI_INT, 0, 2, MPI_COMM_WORLD); // devolve o array sorted com a tag = bucket
 
 			// ********************************************************************************************************
 		}

@@ -1,8 +1,8 @@
 #include "intlist.h"
 #include <stdlib.h>
 
-void intlist_init(List* list, int size) {
-	list->int_list = malloc(sizeof(int) * size);
+void intlist_init(List* list, int size, int* intlist) {
+	list->int_list = intlist;
 	list->index = 0;
 }
 
