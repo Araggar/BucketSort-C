@@ -1,4 +1,6 @@
 *.txt
 *.exe
 *.in
-__pychache__/
+*.pyc
+__pycache__/
+tests/
