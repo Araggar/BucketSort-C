@@ -169,20 +169,22 @@ int main(int argc, char** argv) {
 			} else {
 
 				// envia os buckets iniciais
+				printf("Entering Initial set\n");
 				for (int i = 1; i < size ; i++) {
+					printf("Current: %i  Remaining:  %i\n", current_bucket, remaining_buckets);
 					if (bucket_array_sizes[current_bucket] > 1) {
 						MPI_Send(&current_bucket, 1, MPI_INT, i, 0, MPI_COMM_WORLD); // envia id do bucket
-						printf("Current: %i  Remaining:  %i\n", current_bucket, remaining_buckets);
 						current_bucket++;
 					} else {
 						current_bucket++;
 						remaining_buckets--;
 					}
 					
+					
 				}
-
+				printf("Entering while\n");
 				// enquanto tiver buckets ele irá continuar recebendo eles ordenado, e enviando um novo
-				while (remaining_buckets != 0) {
+				while (remaining_buckets > 0) {
 
 					// recebe o bucket do escravo
 					MPI_Recv(&bucket_id, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &status);
@@ -190,14 +192,17 @@ int main(int argc, char** argv) {
 					remaining_buckets--;
 					printf("Current: %i  Remaining:  %i\n", current_bucket, remaining_buckets);
 
+
 					//envia para esse mesmo escravo um novo bucket valido
-					while (remaining_buckets != 0 && current_bucket <= NUMBER_OF_BUCKETS) {
+					while (remaining_buckets != 0 && current_bucket < NUMBER_OF_BUCKETS) {
 						if (bucket_array_sizes[current_bucket] > 1) {
 							MPI_Send(&current_bucket, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
 							//remaining_buckets--;
 							current_bucket++;
 							break;
 						}
+						print_array(&NUMBER_OF_BUCKETS, bucket_array_sizes);
+						printf("AM I EMPTY? %i\n",bucket_array_sizes[current_bucket]);
 						current_bucket++;
 						remaining_buckets--;
 					}
