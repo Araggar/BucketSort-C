@@ -39,16 +39,20 @@ def main():
 	with open(path, 'w') as results:
 		for p in range (1, args.processes + 1):
 			for b in range(1, args.buckets + 1):
-				exec_str = "call('mpirun -n {} {} {} {} 0 < {}', stdout=trash, shell=True)".format(
-					p, args.name, args.size, b, array_path)
-				_time = timeit(exec_str, number=1, setup='import os; from subprocess import call; trash=open(os.devnull, "w")')
+				_time = 0
+				for i in range(5):
+					exec_str = "call('mpirun -n {} {} {} {} 0 < {}', stdout=trash, shell=True)".format(
+						p, args.name, args.size, b, array_path)
+					_time += timeit(exec_str, number=1, setup='import os; from subprocess import call; trash=open(os.devnull, "w")')
+					contador += 20
+					print("{:1.2f}%".format(contador/total), end="\r")
+				_time = _time/5
 				if _time < best_time:
 					best_time = _time
 					best_pb = p, b
 				results.write("N_Pro.:{} | N_Buck.:{} | time:{:0.15f} s\n".format(p, b, _time))
-				contador += 100
-				print("{:1.2f}%".format(contador/total), end="\r")
-		results.write("Best Processes/Buckets combo: P:{} B:{} with : {:0.15f} seconds".format(best_pb[0], best_pb[1], best_time))
+					
+		results.write("Best Processes/Buckets combo: P:{} B:{}, with {:0.15f} seconds".format(best_pb[0], best_pb[1], best_time))
 		print("\n\nBest Processes/Buckets combo: P:{} B:{}, with {:0.15f} seconds".format(best_pb[0], best_pb[1], best_time))
 
 if __name__ == "__main__":
